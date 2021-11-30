@@ -44,7 +44,7 @@ o2ComponentCompilerPlugin.prototype.apply = function(compiler) {
             size: ()=>{ return miniMainFileContent.length}
         };
 
-        const lpPath = path.resolve(process.cwd(), 'public/lp')
+        const lpPath = path.resolve(process.cwd(), 'public/lp');
         const files = await fs.readdir(lpPath);
         for (const file of files){
             const lpContent = await fs.readFile(path.resolve(lpPath, file), {encoding: 'utf8'});
