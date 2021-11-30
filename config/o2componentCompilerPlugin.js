@@ -1,5 +1,6 @@
 const UglifyJS = require("uglify-js");
 const path = require('path');
+const fs = require('fs/promises');
 const pkg = require(path.resolve(process.cwd(), './package.json'));
 const componentPath = pkg.name;
 //const componentPath = "x_component_"+pkg.name.replace(/\./g, '_');
@@ -43,21 +44,16 @@ o2ComponentCompilerPlugin.prototype.apply = function(compiler) {
             size: ()=>{ return miniMainFileContent.length}
         };
 
-        let lpList = fileList.filter((v)=>{
-            return v.startsWith('lp/') && path.extname(v)===".js";
-        });
-        if (lpList && lpList.length){
-            lpList.forEach((lp)=>{
-                let str = String(compilation.assets[lp].source());
-                str = UglifyJS.minify(str).code;
-                let name = path.basename(lp, '.js')+'.min.js';
-                name = path.dirname(lp)+'/'+name;
-
-                compilation.assets[name] = {
-                    source: ()=>{ return str},
-                    size: ()=>{ return str.length}
-                };
-            })
+        const lpPath = path.resolve(process.cwd(), 'public/lp')
+        const files = await fs.readdir(lpPath);
+        for (const file of files){
+            const lpContent = await fs.readFile(path.resolve(lpPath, file), {encoding: 'utf8'});
+            const miniLpContent = UglifyJS.minify(lpContent).code;
+            const name = path.basename(file, '.js')+'.min.js'
+            compilation.assets["lp/"+name] = {
+                source: ()=>{ return miniLpContent},
+                size: ()=>{ return miniLpContent.length}
+            };
         }
 
         callback();
