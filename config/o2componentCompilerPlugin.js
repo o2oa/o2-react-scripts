@@ -6,7 +6,7 @@ const componentPath = pkg.name;
 //const componentPath = "x_component_"+pkg.name.replace(/\./g, '_');
 const componentName = componentPath.replace('x_component_', '').split('_').join('.');
 
-function o2ComponentCompilerPlugin(options) {}
+// function o2ComponentCompilerPlugin(options) {}
 
 function includeMain(fileList, filter, extname){
     let list = fileList.filter((v)=>{
@@ -20,43 +20,92 @@ function includeMain(fileList, filter, extname){
     }
     return '';
 }
-o2ComponentCompilerPlugin.prototype.apply = function(compiler) {
-    compiler.plugin('emit', async function(compilation, callback) {
-        const fileList = Object.keys(compilation.assets);
 
-        let mainFileContent = `o2.component("${componentName}", {\n`;
+module.exports = class o2ComponentCompilerPlugin {
+    // Define `apply` as its prototype method which is supplied with compiler as its argument
+    apply(compiler) {
+        // Specify the event hook to attach to
+        compiler.hooks.emit.tapAsync(
+            'o2ComponentCompilerPlugin',
+            async (compilation, callback) => {
+                const fileList = Object.keys(compilation.assets);
 
-        const css = includeMain(fileList, 'static/css', '.css');
-        if (css) mainFileContent += `    css: [${css}],\n`;
+                let mainFileContent = `o2.component("${componentName}", {\n`;
 
-        const js = includeMain(fileList, 'static/js', '.js');
-        if (js) mainFileContent += `    js: [${js}],\n`;
+                const css = includeMain(fileList, 'static/css', '.css');
+                if (css) mainFileContent += `    css: [${css}],\n`;
 
-        mainFileContent += `});`;
+                const js = includeMain(fileList, 'static/js', '.js');
+                if (js) mainFileContent += `    js: [${js}],\n`;
 
-        compilation.assets['Main.js'] = {
-            source: ()=>{ return mainFileContent},
-            size: ()=>{ return mainFileContent.length}
-        };
-        const miniMainFileContent = UglifyJS.minify(mainFileContent).code;
-        compilation.assets['Main.min.js'] = {
-            source: ()=>{ return miniMainFileContent},
-            size: ()=>{ return miniMainFileContent.length}
-        };
+                mainFileContent += `});`;
 
-        const lpPath = path.resolve(process.cwd(), 'public/lp');
-        const files = await fs.readdir(lpPath);
-        for (const file of files){
-            const lpContent = await fs.readFile(path.resolve(lpPath, file), {encoding: 'utf8'});
-            const miniLpContent = UglifyJS.minify(lpContent).code;
-            const name = path.basename(file, '.js')+'.min.js'
-            compilation.assets["lp/"+name] = {
-                source: ()=>{ return miniLpContent},
-                size: ()=>{ return miniLpContent.length}
-            };
-        }
+                compilation.assets['Main.js'] = {
+                    source: ()=>{ return mainFileContent},
+                    size: ()=>{ return mainFileContent.length}
+                };
+                const miniMainFileContent = UglifyJS.minify(mainFileContent).code;
+                compilation.assets['Main.min.js'] = {
+                    source: ()=>{ return miniMainFileContent},
+                    size: ()=>{ return miniMainFileContent.length}
+                };
 
-        callback();
-    });
-};
-module.exports = o2ComponentCompilerPlugin;
+                const lpPath = path.resolve(process.cwd(), 'public/lp');
+                const files = await fs.readdir(lpPath);
+                for (const file of files){
+                    const lpContent = await fs.readFile(path.resolve(lpPath, file), {encoding: 'utf8'});
+                    const miniLpContent = UglifyJS.minify(lpContent).code;
+                    const name = path.basename(file, '.js')+'.min.js'
+                    compilation.assets["lp/"+name] = {
+                        source: ()=>{ return miniLpContent},
+                        size: ()=>{ return miniLpContent.length}
+                    };
+                }
+
+                callback();
+            }
+        );
+    }
+}
+
+// function o2ComponentCompilerPlugin(options) {};
+// o2ComponentCompilerPlugin.prototype.apply = function(compiler) {
+//     compiler.plugin('emit', async function(compilation, callback) {
+//         const fileList = Object.keys(compilation.assets);
+//
+//         let mainFileContent = `o2.component("${componentName}", {\n`;
+//
+//         const css = includeMain(fileList, 'static/css', '.css');
+//         if (css) mainFileContent += `    css: [${css}],\n`;
+//
+//         const js = includeMain(fileList, 'static/js', '.js');
+//         if (js) mainFileContent += `    js: [${js}],\n`;
+//
+//         mainFileContent += `});`;
+//
+//         compilation.assets['Main.js'] = {
+//             source: ()=>{ return mainFileContent},
+//             size: ()=>{ return mainFileContent.length}
+//         };
+//         const miniMainFileContent = UglifyJS.minify(mainFileContent).code;
+//         compilation.assets['Main.min.js'] = {
+//             source: ()=>{ return miniMainFileContent},
+//             size: ()=>{ return miniMainFileContent.length}
+//         };
+//
+//         const lpPath = path.resolve(process.cwd(), 'public/lp');
+//         const files = await fs.readdir(lpPath);
+//         for (const file of files){
+//             const lpContent = await fs.readFile(path.resolve(lpPath, file), {encoding: 'utf8'});
+//             const miniLpContent = UglifyJS.minify(lpContent).code;
+//             const name = path.basename(file, '.js')+'.min.js'
+//             compilation.assets["lp/"+name] = {
+//                 source: ()=>{ return miniLpContent},
+//                 size: ()=>{ return miniLpContent.length}
+//             };
+//         }
+//
+//         callback();
+//     });
+// };
+// module.exports = o2ComponentCompilerPlugin;
