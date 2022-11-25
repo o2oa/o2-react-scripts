@@ -10,12 +10,11 @@ const pkg = require(path.resolve(process.cwd(), './package.json'));
 
 const componentPath = pkg.name;
 const server = config.server;
-const host = `${(server.https) ? 'https' : 'http'}://${server.host}/${(!server.httpPort || server.httpPort==='80') ? '' : server.httpPort}`;
+const host = `${(server.https) ? 'https' : 'http'}://${server.host}${(!server.httpPort || server.httpPort==='80') ? '' : ':'+server.httpPort}`;
 
 const myproxy = o2componentProxySetup.createProxyMiddleware({
     target: host,
-    changeOrigin: true,
-    ws: true
+    changeOrigin: true
 });
 
 module.exports = function(app) {
