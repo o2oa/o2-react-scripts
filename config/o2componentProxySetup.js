@@ -14,13 +14,21 @@ const host = `${(server.https) ? 'https' : 'http'}://${server.host}${(!server.ht
 
 const myproxy = o2componentProxySetup.createProxyMiddleware({
     target: host,
-    changeOrigin: true
+    changeOrigin: true,
+    onProxyRes: (proxyRes, req, res) => {
+        const cookie = proxyRes.headers['set-cookie'];
+        if (cookie && cookie[0]){
+            const host = req.headers['host'].split(':')[0];
+            cookie[0] = cookie[0].replace(/(domain=)([^;]+)/, '$1'+host);
+        }
+    }
 });
 
 module.exports = function(app) {
-    if (server.port!==server.httpPort){
-        app.use((req, res, next) => {
-            if (req.url.startsWith('/x_desktop/res/config/config.json')){
+    // if (server.port!==server.httpPort){
+    app.use((req, res, next) => {
+        if (req.url.startsWith('/x_desktop/res/config/config.json')){
+            if (server.port!==server.httpPort){
                 const configUrl = new URL(req.url, host);
                 axios.get(configUrl.toString()).then((json)=>{
                     let o2Config = json.data;
@@ -37,27 +45,29 @@ module.exports = function(app) {
                     res.json(o2Config);
                     next();
                 }).catch(()=>{next()});
-
-            }else if (req.url.indexOf(componentPath+'/lp')!==-1 && req.url.indexOf('min')!==-1) {
-
-                let toUrl =  path.basename(req._parsedUrl.pathname).replace(/min\./, '')
-                toUrl = path.resolve(process.cwd()+'\\public', './lp/'+toUrl);
-                fs.readFile(toUrl).then((data)=>{
-                    res.setHeader('Content-Type', 'application/javascript; charset=UTF-8');
-                    res.send(data);
-                    next();
-                }, ()=>{
-                    res.send('');
-                    next();
-                });
-            }else if(req.url.indexOf('/'+componentPath+'/')!==-1 ){
-                req.url = req.url.replace('/'+componentPath+'/', '/');
-                next()
-            }else{
-                next();
             }
-        });
-    }
+            next();
+
+        }else if (req.url.indexOf(componentPath+'/lp')!==-1 && req.url.indexOf('min')!==-1) {
+
+            let toUrl =  path.basename(req._parsedUrl.pathname).replace(/min\./, '')
+            toUrl = path.resolve(process.cwd()+'\\public', './lp/'+toUrl);
+            fs.readFile(toUrl).then((data)=>{
+                res.setHeader('Content-Type', 'application/javascript; charset=UTF-8');
+                res.send(data);
+                next();
+            }, ()=>{
+                res.send('');
+                next();
+            });
+        }else if(req.url.indexOf('/'+componentPath+'/')!==-1 ){
+            req.url = req.url.replace('/'+componentPath+'/', '/');
+            next()
+        }else{
+            next();
+        }
+    });
+    // }
 
     app.use(
         ['^/o2_core', '^/o2_lib', '^/x_desktop', '^/x_*', '!^/'+componentPath],
